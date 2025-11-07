@@ -1,0 +1,549 @@
+import { test, expect } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright';
+import { injectAxe, checkA11y } from 'axe-playwright'
+import { AccessibilityCheck } from './accessibilitycheck.spec'
+import { createHtmlReport } from 'axe-html-reporter';
+const fs = require('fs');
+const path = require('path');
+
+test.describe('Qarenatest.btsmomenta.com Accessibility Test', () => {
+    const ts = new AccessibilityCheck();
+    
+    // Create screenshots directory
+    const screenshotsDir = 'build/reports/screenshots';
+    if (!fs.existsSync(screenshotsDir)) {
+        fs.mkdirSync(screenshotsDir, { recursive: true });
+    }
+
+    async function runA11yCheck(page: import('@playwright/test').Page, label = '') {
+        try {
+            await ts.checkAccessibility(page);
+        } catch (error) {
+            console.log(`Accessibility violation detected ${label ? 'at ' + label : ''}`, error);
+        }
+    }
+
+    async function takeScreenshot(page: import('@playwright/test').Page, screenshotName: string) {
+        try {
+            const screenshotPath = path.join(screenshotsDir, `${screenshotName}.png`);
+            await page.screenshot({ 
+                path: screenshotPath, 
+                fullPage: true 
+            });
+            console.log(`Screenshot saved: ${screenshotPath}`);
+            return screenshotPath;
+        } catch (error) {
+            console.log(`Failed to take screenshot: ${screenshotName}`, error);
+            return null;
+        }
+    }
+
+    async function takeElementScreenshot(page: import('@playwright/test').Page, selector: string, screenshotName: string) {
+        try {
+            const element = page.locator(selector).first();
+            if (await element.isVisible()) {
+                const screenshotPath = path.join(screenshotsDir, `${screenshotName}.png`);
+                await element.screenshot({ path: screenshotPath });
+                return screenshotPath;
+            }
+        } catch (error) {
+            console.log(`Failed to take element screenshot: ${screenshotName}`, error);
+        }
+        return null;
+    }
+
+    async function captureViolationScreenshots(page: import('@playwright/test').Page, accessibilityResults: any, label: string) {
+        if (accessibilityResults.violations && accessibilityResults.violations.length > 0) {
+            for (let i = 0; i < accessibilityResults.violations.length; i++) {
+                const violation = accessibilityResults.violations[i];
+                for (let j = 0; j < violation.nodes.length; j++) {
+                    const node = violation.nodes[j];
+                    if (node.target && node.target.length > 0) {
+                        const selector = node.target[0];
+                        await takeElementScreenshot(
+                            page, 
+                            selector, 
+                            `violation-${label}-${violation.id}-${j}`
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    async function generateEnhancedReport(accessibilityScanResults: any, page: import('@playwright/test').Page, label: string, url: string) {
+        // Take full page screenshot
+        const fullScreenshot = await takeScreenshot(page, `fullpage-${label}`);
+        
+        // Capture violation-specific screenshots
+        await captureViolationScreenshots(page, accessibilityScanResults, label);
+
+        // Enhanced HTML report with screenshots
+        const reportHTML = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Accessibility Report - ${label}</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/css/lightbox.min.css" rel="stylesheet">
+            <style>
+                .screenshot-gallery {
+                    margin: 20px 0;
+                }
+                .violation-screenshot {
+                    max-width: 300px;
+                    border: 2px solid #dc3545;
+                    cursor: pointer;
+                }
+                .hotspot-marker {
+                    width: 20px;
+                    height: 20px;
+                    background: #dc3545;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    position: absolute;
+                    cursor: pointer;
+                }
+                .violation-card {
+                    border-left: 4px solid #dc3545;
+                }
+                .impact-serious { border-left-color: #dc3545; }
+                .impact-moderate { border-left-color: #ffc107; }
+                .impact-minor { border-left-color: #17a2b8; }
+                .summary-stats {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    margin-bottom: 30px;
+                }
+                .stat-card {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 8px;
+                    padding: 15px;
+                    text-align: center;
+                }
+                .violation-severity {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 0.8em;
+                    font-weight: bold;
+                }
+                .severity-serious { background: #dc3545; color: white; }
+                .severity-moderate { background: #ffc107; color: black; }
+                .severity-minor { background: #17a2b8; color: white; }
+            </style>
+        </head>
+        <body>
+            <div class="container mt-4">
+                <div class="summary-stats">
+                    <h1>🔍 Accessibility Report - ${label}</h1>
+                    <p class="lead">URL: <a href="${url}" target="_blank" style="color: #fff; text-decoration: underline;">${url}</a></p>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h3>${accessibilityScanResults.violations.length}</h3>
+                                <p>Violations</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h3>${accessibilityScanResults.passes.length}</h3>
+                                <p>Passes</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h3>${accessibilityScanResults.incomplete.length}</h3>
+                                <p>Incomplete</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h3>${new Date().toLocaleString()}</h3>
+                                <p>Scan Time</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>📸 Full Page Screenshot</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                ${fullScreenshot ? `
+                                <a href="${fullScreenshot}" data-lightbox="screenshots" data-title="${label} - Full Page">
+                                    <img src="${fullScreenshot}" alt="${label} screenshot" class="img-fluid rounded" style="max-height: 400px; border: 2px solid #dee2e6;">
+                                </a>
+                                <p class="mt-2 text-muted">Click to view full size</p>
+                                ` : 'No screenshot available'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${accessibilityScanResults.violations.length > 0 ? `
+                <div class="mt-4">
+                    <h3>🚨 Accessibility Violations</h3>
+                    ${accessibilityScanResults.violations.map((violation: any, index: number) => `
+                    <div class="card violation-card impact-${violation.impact} mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title">${violation.id}</h5>
+                                <span class="violation-severity severity-${violation.impact}">${violation.impact.toUpperCase()}</span>
+                            </div>
+                            <p class="card-text"><strong>Description:</strong> ${violation.description}</p>
+                            <p><strong>WCAG Guidelines:</strong> ${violation.tags.filter((tag: string) => tag.includes('wcag')).join(', ')}</p>
+                            <p><strong>Help:</strong> ${violation.help}</p>
+                            
+                            <div class="screenshot-gallery">
+                                <h6>🔍 Affected Elements (${violation.nodes.length}):</h6>
+                                <div class="row">
+                                ${violation.nodes.map((node: any, nodeIndex: number) => {
+                                    const screenshotPath = `screenshots/violation-${label}-${violation.id}-${nodeIndex}.png`;
+                                    return `
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <p><strong>Element:</strong> <code>${node.target ? node.target[0] : 'N/A'}</code></p>
+                                                <p><strong>HTML:</strong> <code>${node.html ? node.html.substring(0, 100) + '...' : 'N/A'}</code></p>
+                                                ${fs.existsSync(path.join('build/reports', screenshotPath)) ? `
+                                                <a href="${screenshotPath}" data-lightbox="violation-${index}" data-title="${violation.id} - Element ${nodeIndex + 1}">
+                                                    <img src="${screenshotPath}" alt="Violation ${violation.id}" class="violation-screenshot img-thumbnail">
+                                                </a>
+                                                ` : '<p class="text-muted">No screenshot available</p>'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    `;
+                                }).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    `).join('')}
+                </div>
+                ` : '<div class="alert alert-success mt-4"><h4>✅ No accessibility violations found!</h4><p>Great job! This page meets accessibility standards.</p></div>'}
+
+                ${accessibilityScanResults.passes.length > 0 ? `
+                <div class="mt-4">
+                    <h3>✅ Passed Checks</h3>
+                    <div class="row">
+                        ${accessibilityScanResults.passes.slice(0, 10).map((pass: any) => `
+                        <div class="col-md-6 mb-2">
+                            <div class="card border-success">
+                                <div class="card-body py-2">
+                                    <h6 class="card-title text-success">${pass.id}</h6>
+                                    <p class="card-text small">${pass.description}</p>
+                                </div>
+                            </div>
+                        </div>
+                        `).join('')}
+                        ${accessibilityScanResults.passes.length > 10 ? `<div class="col-12"><p class="text-muted">... and ${accessibilityScanResults.passes.length - 10} more passed checks</p></div>` : ''}
+                    </div>
+                </div>
+                ` : ''}
+
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/js/lightbox.min.js"></script>
+                <script>
+                    lightbox.option({
+                        'resizeDuration': 200,
+                        'wrapAround': true,
+                        'imageFadeDuration': 300
+                    });
+                </script>
+            </div>
+        </body>
+        </html>
+        `;
+
+        const reportPath = path.join('build/reports', `accessibility-report-${label.replace(/\s+/g, '-').toLowerCase()}.html`);
+        fs.writeFileSync(reportPath, reportHTML);
+        console.log(`Enhanced report generated: ${reportPath}`);
+        return reportPath;
+    }
+
+    test('Qarenatest.btsmomenta.com Comprehensive Accessibility Test', async ({ page }) => {
+        const baseUrl = 'https://qarenatest.btsmomenta.com';
+        const testSteps = [
+            { 
+                name: 'home-page', 
+                url: `${baseUrl}/`,
+                description: 'Main homepage'
+            },
+            { 
+                name: 'login-page', 
+                url: `${baseUrl}/#/auth/login`,
+                description: 'Login page'
+            },
+            { 
+                name: 'register-page', 
+                url: `${baseUrl}/#/auth/register`,
+                description: 'Registration page'
+            },
+            { 
+                name: 'forgot-password', 
+                url: `${baseUrl}/#/auth/forgot-password`,
+                description: 'Forgot password page'
+            }
+        ];
+
+        const allResults = [];
+        const allViolations = [];
+
+        // Execute each test step with accessibility checking and screenshots
+        for (const step of testSteps) {
+            console.log(`\n🔍 Scanning: ${step.description} (${step.url})`);
+            
+            try {
+                // Navigate to the page
+                await page.goto(step.url, { waitUntil: 'networkidle' });
+                await page.waitForTimeout(3000);
+                
+                // Take screenshot
+                await takeScreenshot(page, step.name);
+                
+                // Run accessibility check
+                await runA11yCheck(page, step.name);
+                
+                // Generate accessibility report for this step
+                const accessibilityScanResults = await new AxeBuilder({ page })
+                    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag21a', 'wcag21aa'])
+                    .analyze();
+                
+                allResults.push({
+                    step: step.name,
+                    url: step.url,
+                    description: step.description,
+                    results: accessibilityScanResults
+                });
+                
+                allViolations.push(...accessibilityScanResults.violations.map(v => ({
+                    ...v,
+                    page: step.name,
+                    url: step.url
+                })));
+
+                // Generate individual page report
+                await generateEnhancedReport(accessibilityScanResults, page, step.name, step.url);
+                
+                console.log(`✅ Completed: ${step.name} - ${accessibilityScanResults.violations.length} violations found`);
+                
+            } catch (error) {
+                console.log(`❌ Error scanning ${step.name}:`, error);
+            }
+        }
+
+        // Generate comprehensive final report
+        console.log('\n📊 Generating comprehensive final report...');
+        
+        const finalReportHTML = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Qarenatest.btsmomenta.com - Comprehensive Accessibility Report</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/css/lightbox.min.css" rel="stylesheet">
+            <style>
+                .summary-stats {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 30px;
+                    border-radius: 15px;
+                    margin-bottom: 30px;
+                }
+                .stat-card {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 10px;
+                    padding: 20px;
+                    text-align: center;
+                    margin-bottom: 15px;
+                }
+                .page-card {
+                    border-left: 4px solid #007bff;
+                    margin-bottom: 20px;
+                }
+                .violation-summary {
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin: 10px 0;
+                }
+                .severity-badge {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 0.8em;
+                    font-weight: bold;
+                    margin-right: 5px;
+                }
+                .severity-serious { background: #dc3545; color: white; }
+                .severity-moderate { background: #ffc107; color: black; }
+                .severity-minor { background: #17a2b8; color: white; }
+            </style>
+        </head>
+        <body>
+            <div class="container mt-4">
+                <div class="summary-stats">
+                    <h1>🔍 Comprehensive Accessibility Report</h1>
+                    <p class="lead">Qarenatest.btsmomenta.com - ${new Date().toLocaleDateString()}</p>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h2>${allResults.length}</h2>
+                                <p>Pages Scanned</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h2>${allViolations.length}</h2>
+                                <p>Total Violations</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h2>${allViolations.filter(v => v.impact === 'serious').length}</h2>
+                                <p>Serious Issues</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h2>${allViolations.filter(v => v.impact === 'moderate').length}</h2>
+                                <p>Moderate Issues</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <h3>📄 Page-by-Page Results</h3>
+                        ${allResults.map(result => `
+                        <div class="card page-card">
+                            <div class="card-body">
+                                <h5 class="card-title">${result.description}</h5>
+                                <p class="card-text">
+                                    <strong>URL:</strong> <a href="${result.url}" target="_blank">${result.url}</a><br>
+                                    <strong>Violations:</strong> ${result.results.violations.length} | 
+                                    <strong>Passes:</strong> ${result.results.passes.length} | 
+                                    <strong>Incomplete:</strong> ${result.results.incomplete.length}
+                                </p>
+                                ${result.results.violations.length > 0 ? `
+                                <div class="violation-summary">
+                                    <h6>Violations Found:</h6>
+                                    ${result.results.violations.map(violation => `
+                                    <span class="severity-badge severity-${violation.impact}">${violation.impact}</span>
+                                    <strong>${violation.id}:</strong> ${violation.description}<br>
+                                    `).join('')}
+                                </div>
+                                ` : '<div class="alert alert-success">✅ No violations found on this page</div>'}
+                                <a href="accessibility-report-${result.step}.html" class="btn btn-primary btn-sm">View Detailed Report</a>
+                            </div>
+                        </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                ${allViolations.length > 0 ? `
+                <div class="mt-4">
+                    <h3>🚨 All Violations Summary</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Violation ID</th>
+                                    <th>Impact</th>
+                                    <th>Description</th>
+                                    <th>Pages Affected</th>
+                                    <th>WCAG Guidelines</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${Object.values(allViolations.reduce((acc, violation) => {
+                                    const key = violation.id;
+                                    if (!acc[key]) {
+                                        acc[key] = {
+                                            ...violation,
+                                            pages: new Set()
+                                        };
+                                    }
+                                    acc[key].pages.add(violation.page);
+                                    return acc;
+                                }, {})).map(violation => `
+                                <tr>
+                                    <td><code>${violation.id}</code></td>
+                                    <td><span class="severity-badge severity-${violation.impact}">${violation.impact}</span></td>
+                                    <td>${violation.description}</td>
+                                    <td>${Array.from(violation.pages).join(', ')}</td>
+                                    <td>${violation.tags.filter(tag => tag.includes('wcag')).join(', ')}</td>
+                                </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="mt-4">
+                    <div class="alert alert-info">
+                        <h5>📋 Report Information</h5>
+                        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                        <p><strong>Tool:</strong> axe-core with Playwright</p>
+                        <p><strong>Standards:</strong> WCAG 2.1 AA</p>
+                        <p><strong>Browser:</strong> Chromium</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+
+        const finalReportPath = path.join('build/reports', 'qarenatest-comprehensive-accessibility-report.html');
+        fs.writeFileSync(finalReportPath, finalReportHTML);
+        console.log(`\n📊 Comprehensive report generated: ${finalReportPath}`);
+
+        // Also generate using axe-html-reporter
+        const axeReport = createHtmlReport({
+            results: {
+                violations: allViolations,
+                passes: allResults.flatMap(r => r.results.passes),
+                incomplete: allResults.flatMap(r => r.results.incomplete),
+                url: baseUrl,
+                timestamp: new Date().toISOString()
+            },
+            options: {
+                projectKey: "QarenatestAccessibility"
+            },
+        });
+
+        fs.writeFileSync("build/reports/qarenatest-axe-report.html", axeReport);
+        console.log(`📊 Axe report generated: build/reports/qarenatest-axe-report.html`);
+
+        // Summary
+        console.log(`\n📈 SUMMARY:`);
+        console.log(`   Pages scanned: ${allResults.length}`);
+        console.log(`   Total violations: ${allViolations.length}`);
+        console.log(`   Serious issues: ${allViolations.filter(v => v.impact === 'serious').length}`);
+        console.log(`   Moderate issues: ${allViolations.filter(v => v.impact === 'moderate').length}`);
+        console.log(`   Minor issues: ${allViolations.filter(v => v.impact === 'minor').length}`);
+        console.log(`\n📁 Reports generated:`);
+        console.log(`   - Comprehensive: ${finalReportPath}`);
+        console.log(`   - Axe format: build/reports/qarenatest-axe-report.html`);
+        console.log(`   - Individual page reports in build/reports/`);
+
+        // Don't fail the test - just report the results
+        if (allViolations.length > 0) {
+            console.log(`\n⚠️  ${allViolations.length} accessibility violations found. Please review the reports for details.`);
+        } else {
+            console.log(`\n✅ No accessibility violations found!`);
+        }
+    });
+});

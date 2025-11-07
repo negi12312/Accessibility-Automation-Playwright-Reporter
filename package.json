@@ -1,0 +1,28 @@
+{
+  "name": "accessibility-automation-1",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "access": "npx playwright test access.spec.ts --project=chromium --workers=1",
+    "neom": "npx playwright test neom.spec.ts --project=chromium --workers=1",
+    "neom-focused": "npx playwright test neom-accessibility-focused.spec.ts --project=chromium --workers=1",
+    "abbott": "npx playwright test abbott.spec.ts --project=chromium --workers=1",
+    "pulse": "npx playwright test pulse.spec.ts --project=chromium --workers=1",
+    "qarenatest": "npx playwright test qarenatest-accessibility-comprehensive.spec.ts --project=chromium --workers=1",
+    "qarenatest-original": "npx playwright test qarenatest-accessibility.spec.ts --project=chromium --workers=1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^22.13.1",
+    "axe-playwright": "^2.0.3",
+    "lightbox2": "^2.11.3"
+  },
+  "dependencies": {
+    "axe-html-reporter": "^2.2.11"
+  }
+}

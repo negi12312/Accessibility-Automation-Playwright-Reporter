@@ -1,0 +1,910 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neom Accessibility Test - Comprehensive Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/css/lightbox.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+        }
+        
+        .report-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 4rem 0;
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .report-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .report-header .container {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .test-step-card {
+            border-left: 5px solid var(--success-color);
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        .test-step-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .test-step-card.violation {
+            border-left-color: var(--danger-color);
+            background: linear-gradient(90deg, rgba(220,53,69,0.02) 0%, transparent 100%);
+        }
+        
+        .violation-card {
+            border-left: 5px solid var(--danger-color);
+            margin-bottom: 1.5rem;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .violation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .impact-critical { 
+            border-left-color: var(--danger-color);
+            background: linear-gradient(90deg, rgba(220,53,69,0.05) 0%, transparent 100%);
+        }
+        .impact-serious { 
+            border-left-color: var(--warning-color);
+            background: linear-gradient(90deg, rgba(255,193,7,0.05) 0%, transparent 100%);
+        }
+        .impact-moderate { 
+            border-left-color: var(--info-color);
+            background: linear-gradient(90deg, rgba(23,162,184,0.05) 0%, transparent 100%);
+        }
+        .impact-minor { 
+            border-left-color: #6c757d;
+            background: linear-gradient(90deg, rgba(108,117,125,0.05) 0%, transparent 100%);
+        }
+        
+        .screenshot-gallery {
+            margin: 20px 0;
+        }
+        
+        .violation-screenshot {
+            max-width: 300px;
+            border: 3px solid var(--danger-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .violation-screenshot:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        
+        .step-screenshot {
+            max-width: 100%;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .step-screenshot:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        
+        .summary-stats {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 2.5rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .status-badge {
+            font-size: 0.9rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            font-weight: 600;
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 3rem;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 1.5rem;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-radius: 2px;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 3rem;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.25rem;
+            top: 1rem;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--success-color);
+            border: 4px solid white;
+            box-shadow: 0 0 0 3px var(--success-color);
+            z-index: 1;
+        }
+        
+        .timeline-item.violation::before {
+            background: var(--danger-color);
+            box-shadow: 0 0 0 3px var(--danger-color);
+        }
+        
+        .recommendations {
+            background: linear-gradient(135deg, #e7f3ff 0%, #f0f8ff 100%);
+            border-left: 5px solid #007bff;
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+            text-align: center;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .metric-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .progress-ring {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+        }
+        
+        .progress-ring circle {
+            fill: transparent;
+            stroke-width: 10;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        
+        .progress-ring .progress-ring-circle {
+            stroke: var(--success-color);
+            stroke-dasharray: 471;
+            stroke-dashoffset: 471;
+            animation: progress 2s ease-in-out forwards;
+        }
+        
+        @keyframes progress {
+            to {
+                stroke-dashoffset: 32.96999999999997;
+            }
+        }
+        
+        .wcag-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .wcag-tag {
+            background: #e9ecef;
+            color: #495057;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+        
+        .btn-floating {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-floating:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        
+        .executive-summary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-4 mb-3">
+                        <i class="fas fa-universal-access me-3"></i>
+                        Neom Accessibility Test Report
+                    </h1>
+                    <p class="lead mb-2">Comprehensive accessibility analysis with visual evidence and detailed findings</p>
+                    <p class="mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Generated: 10/10/2025, 12:27:37 pm
+                        <span class="ms-3">
+                            <i class="fas fa-clock me-2"></i>
+                            Test Duration: 2m 26s
+                        </span>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="summary-stats text-dark">
+                        <h4 class="mb-3">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Test Summary
+                        </h4>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="h2 text-danger">2</div>
+                                <p class="text-muted mb-0">Violations</p>
+                            </div>
+                            <div class="col-4">
+                                <div class="h2 text-success">25</div>
+                                <p class="text-muted mb-0">Passes</p>
+                            </div>
+                            <div class="col-4">
+                                <div class="h2 text-info">93%</div>
+                                <p class="text-muted mb-0">Pass Rate</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Executive Summary -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="executive-summary">
+                    <div class="row align-items-center mb-4">
+                        <div class="col-md-8">
+                            <h3 class="mb-3">
+                                <i class="fas fa-chart-line text-primary me-2"></i>
+                                Executive Summary
+                            </h3>
+                            <p class="lead mb-0">Comprehensive accessibility analysis completed with detailed findings and recommendations</p>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="progress-ring">
+                                <svg class="progress-ring" width="150" height="150">
+                                    <circle class="progress-ring-circle" cx="75" cy="75" r="65"></circle>
+                                </svg>
+                                <div class="position-absolute top-50 start-50 translate-middle">
+                                    <div class="h3 mb-0">93%</div>
+                                    <small class="text-muted">Pass Rate</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <div class="metric-card">
+                                <div class="metric-value text-success">8</div>
+                                <div class="metric-label">Steps Passed</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="metric-card">
+                                <div class="metric-value text-danger">2</div>
+                                <div class="metric-label">Steps with Issues</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="metric-card">
+                                <div class="metric-value text-warning">1</div>
+                                <div class="metric-label">Critical Issues</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="metric-card">
+                                <div class="metric-value text-info">1</div>
+                                <div class="metric-label">Serious Issues</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="alert alert-warning mt-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Key Findings
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="mb-0">
+                                    <li><strong>Critical Issues:</strong> 1 critical accessibility violations found</li>
+                                    <li><strong>Serious Issues:</strong> 1 serious accessibility violations found</li>
+                                    <li><strong>WCAG Compliance:</strong> Violations of WCAG 2.1 AA standards detected</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="mb-0">
+                                    <li><strong>Image Alt Text Issues:</strong> Images with empty or insufficient alternative text</li>
+                                    <li><strong>Color Contrast Issues:</strong> Text elements with insufficient contrast ratios</li>
+                                    <li><strong>Total Violations:</strong> 2 accessibility issues found</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Steps Timeline -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3 class="mb-4">
+                    <i class="fas fa-tasks text-primary me-2"></i>
+                    Test Execution Timeline
+                </h3>
+                <div class="timeline">
+                    <!-- Step 1: Login Page -->
+                    <div class="timeline-item">
+                        <div class="card test-step-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">
+                                            <i class="fas fa-globe text-primary me-2"></i>
+                                            Step 1: Login Page Navigation
+                                        </h5>
+                                        <p class="card-text">Successfully navigated to neom.btsmomenta.com login page and performed initial accessibility check.</p>
+                                        <span class="badge bg-success status-badge">
+                                            <i class="fas fa-check me-1"></i>
+                                            No Violations
+                                        </span>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-login-page.png" data-lightbox="test-steps" data-title="Login Page">
+                                            <img src="screenshots/fullpage-login-page.png" alt="Login Page Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Login Credentials -->
+                    <div class="timeline-item">
+                        <div class="card test-step-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">🔐 Step 2: Login Credentials Entry</h5>
+                                        <p class="card-text">Entered test credentials (test_cu2@neom.com) and performed accessibility validation.</p>
+                                        <span class="badge bg-success status-badge">✅ No Violations</span>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-login-credentials.png" data-lightbox="test-steps" data-title="Login Credentials">
+                                            <img src="screenshots/fullpage-login-credentials.png" alt="Login Credentials Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Login Submit -->
+                    <div class="timeline-item">
+                        <div class="card test-step-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">🚀 Step 3: Login Form Submission</h5>
+                                        <p class="card-text">Submitted login form and verified accessibility compliance.</p>
+                                        <span class="badge bg-success status-badge">✅ No Violations</span>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-login-submit.png" data-lightbox="test-steps" data-title="Login Submit">
+                                            <img src="screenshots/fullpage-login-submit.png" alt="Login Submit Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Data Privacy Accept -->
+                    <div class="timeline-item">
+                        <div class="card test-step-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">📋 Step 4: Data Privacy Acceptance</h5>
+                                        <p class="card-text">Handled data privacy dialog and confirmed accessibility standards.</p>
+                                        <span class="badge bg-success status-badge">✅ No Violations</span>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-data-privacy-accept.png" data-lightbox="test-steps" data-title="Data Privacy Accept">
+                                            <img src="screenshots/fullpage-data-privacy-accept.png" alt="Data Privacy Accept Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Home Page Activate - WITH VIOLATIONS -->
+                    <div class="timeline-item violation">
+                        <div class="card test-step-card violation">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">🏠 Step 5: Home Page Activation</h5>
+                                        <p class="card-text">Navigated to home page and activated the interface. <strong>ACCESSIBILITY VIOLATIONS DETECTED!</strong></p>
+                                        <span class="badge bg-danger status-badge">❌ 1 Critical Violation</span>
+                                        <div class="mt-2">
+                                            <small class="text-danger">
+                                                <strong>Issue:</strong> Image alt text violation - Empty alt attribute found
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-home-page-activate.png" data-lightbox="test-steps" data-title="Home Page Activate">
+                                            <img src="screenshots/fullpage-home-page-activate.png" alt="Home Page Activate Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 6: Coaching Journey -->
+                    <div class="timeline-item">
+                        <div class="card test-step-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">🎯 Step 6: Coaching Journey Navigation</h5>
+                                        <p class="card-text">Navigated through coaching journey section and performed accessibility check.</p>
+                                        <span class="badge bg-success status-badge">✅ No Violations</span>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-coaching-journey.png" data-lightbox="test-steps" data-title="Coaching Journey">
+                                            <img src="screenshots/fullpage-coaching-journey.png" alt="Coaching Journey Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 7: Introduction Start -->
+                    <div class="timeline-item">
+                        <div class="card test-step-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">🚀 Step 7: Introduction Activities Start</h5>
+                                        <p class="card-text">Started introduction activities and verified accessibility compliance.</p>
+                                        <span class="badge bg-success status-badge">✅ No Violations</span>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-introduction-start.png" data-lightbox="test-steps" data-title="Introduction Start">
+                                            <img src="screenshots/fullpage-introduction-start.png" alt="Introduction Start Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 8: Introduction Activities -->
+                    <div class="timeline-item">
+                        <div class="card test-step-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">📚 Step 8: Introduction Activities Navigation</h5>
+                                        <p class="card-text">Navigated through introduction activities and performed accessibility validation.</p>
+                                        <span class="badge bg-success status-badge">✅ No Violations</span>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-introduction-activities.png" data-lightbox="test-steps" data-title="Introduction Activities">
+                                            <img src="screenshots/fullpage-introduction-activities.png" alt="Introduction Activities Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 9: Getting Ready Activities - WITH VIOLATIONS -->
+                    <div class="timeline-item violation">
+                        <div class="card test-step-card violation">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">🎯 Step 9: Getting Ready Activities</h5>
+                                        <p class="card-text">Navigated to getting ready activities section. <strong>ACCESSIBILITY VIOLATIONS DETECTED!</strong></p>
+                                        <span class="badge bg-danger status-badge">❌ 2 Violations</span>
+                                        <div class="mt-2">
+                                            <small class="text-danger">
+                                                <strong>Issues:</strong> Image alt text violation + Color contrast issues
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-getting-ready-activities.png" data-lightbox="test-steps" data-title="Getting Ready Activities">
+                                            <img src="screenshots/fullpage-getting-ready-activities.png" alt="Getting Ready Activities Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 10: Prework Activities - WITH VIOLATIONS -->
+                    <div class="timeline-item violation">
+                        <div class="card test-step-card violation">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title">📝 Step 10: Prework Activities</h5>
+                                        <p class="card-text">Navigated to prework activities section. <strong>ACCESSIBILITY VIOLATIONS DETECTED!</strong></p>
+                                        <span class="badge bg-danger status-badge">❌ 2 Violations</span>
+                                        <div class="mt-2">
+                                            <small class="text-danger">
+                                                <strong>Issues:</strong> Image alt text violation + Color contrast issues
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <a href="screenshots/fullpage-prework-activities.png" data-lightbox="test-steps" data-title="Prework Activities">
+                                            <img src="screenshots/fullpage-prework-activities.png" alt="Prework Activities Screenshot" class="step-screenshot" style="max-height: 150px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Violations -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3 class="mb-4">🚨 Detailed Violation Analysis</h3>
+                
+                
+                <div class="card violation-card impact-serious mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">🟡 Serious: color-contrast</h5>
+                        <p class="card-text"><strong>Issue:</strong> Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds</p>
+                        <p><strong>WCAG Standards:</strong> wcag2aa, wcag143</p>
+                        <p><strong>Impact:</strong> Serious - Users with visual impairments cannot read text clearly</p>
+                        
+                        <div class="screenshot-gallery">
+                            <h6>Visual Evidence:</h6>
+                            <div class="row">
+                            
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <p><strong>Element:</strong> li:nth-child(1) > .common-btn.btn-text > span[role="status"][_ngcontent-glf-c541=""]</p>
+                                            
+                                            <a href="screenshots/violation-neom-final-comprehensive-color-contrast-0.png" data-lightbox="violation-0" data-title="color-contrast">
+                                                <img src="screenshots/violation-neom-final-comprehensive-color-contrast-0.png" alt="Violation color-contrast" class="violation-screenshot img-thumbnail">
+                                            </a>
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <p><strong>Element:</strong> li:nth-child(2) > .common-btn.btn-text > span[role="status"][_ngcontent-glf-c541=""]</p>
+                                            
+                                            <a href="screenshots/violation-neom-final-comprehensive-color-contrast-1.png" data-lightbox="violation-0" data-title="color-contrast">
+                                                <img src="screenshots/violation-neom-final-comprehensive-color-contrast-1.png" alt="Violation color-contrast" class="violation-screenshot img-thumbnail">
+                                            </a>
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <p><strong>Element:</strong> .plugin-activity__activityTitle > span[_ngcontent-glf-c541=""]</p>
+                                            
+                                            <a href="screenshots/violation-neom-final-comprehensive-color-contrast-2.png" data-lightbox="violation-0" data-title="color-contrast">
+                                                <img src="screenshots/violation-neom-final-comprehensive-color-contrast-2.png" alt="Violation color-contrast" class="violation-screenshot img-thumbnail">
+                                            </a>
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <p><strong>Element:</strong> .text-capitalize</p>
+                                            
+                                            <a href="screenshots/violation-neom-final-comprehensive-color-contrast-3.png" data-lightbox="violation-0" data-title="color-contrast">
+                                                <img src="screenshots/violation-neom-final-comprehensive-color-contrast-3.png" alt="Violation color-contrast" class="violation-screenshot img-thumbnail">
+                                            </a>
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card violation-card impact-critical mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">🔴 Critical: image-alt</h5>
+                        <p class="card-text"><strong>Issue:</strong> Ensure <img> elements have alternative text or a role of none or presentation</p>
+                        <p><strong>WCAG Standards:</strong> wcag2a, wcag111</p>
+                        <p><strong>Impact:</strong> Critical - Screen readers cannot provide meaningful information</p>
+                        
+                        <div class="screenshot-gallery">
+                            <h6>Visual Evidence:</h6>
+                            <div class="row">
+                            
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <p><strong>Element:</strong> .image-block-center-align</p>
+                                            
+                                            <a href="screenshots/violation-neom-final-comprehensive-image-alt-0.png" data-lightbox="violation-1" data-title="image-alt">
+                                                <img src="screenshots/violation-neom-final-comprehensive-image-alt-0.png" alt="Violation image-alt" class="violation-screenshot img-thumbnail">
+                                            </a>
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="recommendations">
+            <h4>💡 Recommendations for Fixing Accessibility Issues</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>🔴 Critical Issues (Fix Immediately)</h5>
+                    <ul>
+                        <li><strong>Image Alt Text:</strong> Replace empty alt attributes with meaningful descriptions</li>
+                        <li><strong>Example Fix:</strong> Change <code>alt=" "</code> to <code>alt="User dashboard showing activity progress"</code></li>
+                        <li><strong>Testing:</strong> Use screen readers to verify alt text is read correctly</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>🟡 Serious Issues (Fix Soon)</h5>
+                    <ul>
+                        <li><strong>Color Contrast:</strong> Increase contrast ratio to meet WCAG 2.1 AA standards (4.5:1 for normal text)</li>
+                        <li><strong>Tools:</strong> Use WebAIM contrast checker to verify ratios</li>
+                        <li><strong>Testing:</strong> Test with users who have visual impairments</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Details -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>🔧 Technical Test Details</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Test Configuration</h5>
+                                <ul>
+                                    <li><strong>Test Framework:</strong> Playwright with Axe-Core</li>
+                                    <li><strong>WCAG Standards:</strong> WCAG 2.1 A, WCAG 2.1 AA</li>
+                                    <li><strong>Browser:</strong> Chromium (headed mode)</li>
+                                    <li><strong>Test Duration:</strong> 2.7 minutes</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Test Environment</h5>
+                                <ul>
+                                    <li><strong>Target URL:</strong> https://neom.btsmomenta.com</li>
+                                    <li><strong>Test Account:</strong> test_cu2@neom.com</li>
+                                    <li><strong>Screenshots:</strong> 58 total images captured</li>
+                                    <li><strong>Reports Generated:</strong> 12 individual reports</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="mb-3">
+                            <i class="fas fa-folder-open text-primary me-2"></i>
+                            Generated Reports
+                        </h5>
+                        <p class="text-muted mb-4">All reports and screenshots are available in the <code>build/reports/</code> directory</p>
+                        <div class="btn-group" role="group">
+                            <a href="neom-final-accessibility-report.html" class="btn btn-outline-primary">
+                                <i class="fas fa-file-alt me-2"></i>
+                                Axe Format Report
+                            </a>
+                            <a href="accessibility-report-neom-final-comprehensive.html" class="btn btn-outline-secondary">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                Enhanced Report
+                            </a>
+                            <a href="screenshots/" class="btn btn-outline-info">
+                                <i class="fas fa-images me-2"></i>
+                                Screenshots Gallery
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Action Button -->
+        <div class="floating-action">
+            <button class="btn btn-primary btn-floating" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Back to top">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/js/lightbox.min.js"></script>
+    <script>
+        lightbox.option({
+            'resizeDuration': 200,
+            'wrapAround': true,
+            'imageFadeDuration': 300,
+            'albumLabel': 'Image %1 of %2',
+            'fadeDuration': 300,
+            'imageFadeDuration': 300
+        });
+        
+        // Add smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // Add animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+        
+        // Observe all cards for animation
+        document.querySelectorAll('.card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>
